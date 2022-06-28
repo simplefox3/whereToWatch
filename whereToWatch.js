@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         哪里看
 // @namespace    http://tampermonkey.net/
-// @version      0.1.0
+// @version      0.1.1
 // @description  在豆瓣网页检索哪里可以看对应电影，电视剧
 // @author       no name
 // @match        https://movie.douban.com/subject/*
@@ -20,9 +20,14 @@ function getMovieNameFromDouBan() {
         getMovieId(movieName, resolve, reject)
     }).then(function (val) {
         console.log("返回值：", val)
-        if (val[0] == 1) {
+        if (val[0] === 1) {
             createHTML(val[1])
             createCss()
+            displayNoneByRes(val[0])
+        } else if (val[0] === 0) {
+            createHTML(val[1])
+            createCss()
+            displayNoneByRes(val[0])
         }
     })
 }
@@ -39,6 +44,12 @@ function createHTML(url) {
     wrap.classList.add("subject-wheretowatch")
     wrap.innerHTML = `<h2>
                         <i>哪里看</i>
+                        · · · · · ·
+                        <span class="p1">
+                        (
+                        <a href="https://github.com/Eternaldeath/whereToWatch/issues">纠错</a>
+                        )
+                        </span>
                       </h2>
                       <ul>
                         <li>
@@ -46,6 +57,8 @@ function createHTML(url) {
                             <span>
                                 <a href=${url}>资源链接</a>
                             </span>
+                            <span>暂无资源</span>
+                            <span></span>
                         </li>
                       </ul>`
 
@@ -67,9 +80,45 @@ function createCss() {
     .subject-wheretowatch li{
         padding: 4.5px 0;
         border-bottom: 1px dashed #DDD;
-    }`
+    }
+    
+    .p1{
+        font: 13px Arial, Helvetica, sans-serif;
+        line-height: 150%;
+        color: #666666;
+    }
+
+    a:link{
+        color: #37a;
+        text-decoration: none;
+    }
+
+    a{
+        cursor: pointer;
+    }
+
+    .none{
+        display: none;
+    }
+    `
 
     GM_addStyle(css)
+}
+
+/* 
+    根据返回值隐藏模块
+*/
+function displayNoneByRes(res) {
+    let span = document.querySelectorAll(".subject-wheretowatch ul span")
+    console.log(span)
+    if (res === 1) {
+        // 隐藏“暂无资源”
+        span[2].style.cssText = 'display: none'
+    } else if (res === 0) {
+        // 隐藏“资源链接”
+        span[1].style.cssText = 'display: none'
+        span[2].style.cssText = 'color: #FF0000; font-weight: bold'
+    }
 }
 
 
@@ -87,26 +136,31 @@ function getMovieId(movieName, resolve, reject) {
             console.log("请求成功")
             const regexpResourceId = /\/resource\/[0-9]+/
             let resourceMovieId = response.responseText.match(regexpResourceId)
-            console.log("resourceMovieId", resourceMovieId[0])
-            // 提取电影 id
-            const regexpMovieId = /[0-9]{5,5}/
-            // 将数组元素 resourceMovieId 转换成字符串
-            movieId = resourceMovieId.toString().match(regexpMovieId)
-            console.log("movieId", movieId[0].toString())
-            // 传递的数组
-            let info = [1, "https://www.yysub.net/resource/list/" + movieId]
+            let info = new Array();
+            if (resourceMovieId === null) {
+                info = [0, ""]
+            } else {
+                console.log("resourceMovieId", resourceMovieId[0])
+                // 提取电影 id
+                const regexpMovieId = /[0-9]{5,5}/
+                // 将数组元素 resourceMovieId 转换成字符串
+                movieId = resourceMovieId.toString().match(regexpMovieId)
+                console.log("movieId", movieId[0].toString())
+                // 传递的数组
+                info = [1, "https://www.yysub.net/resource/list/" + movieId]
+            }
+
             resolve(info)
         },
         onerror: function (response) {
             console.log("请求失败");
-            reject(0)
+            let info = [0, ""]
+            reject(info)
         }
     });
 }
 
 (function () {
-    console.log("天行健，君子以自强不息！！！")
-
     getMovieNameFromDouBan()
 
 })();
