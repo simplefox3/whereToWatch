@@ -8,7 +8,7 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=douban.com
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
-// @connect      https://www.yysub.net/*
+// @connect      yysub.net
 // @license      MIT
 // ==/UserScript==
 
@@ -19,12 +19,15 @@ function getMovieNameFromDouBan() {
     const returnAns = new Promise(function (resolve, reject) {
         getMovieId(movieName, resolve, reject)
     }).then(function (val) {
-        console.log("返回值：", val)
         if (val[0] === 1) {
             createHTML(val[1])
             createCss()
             displayNoneByRes(val[0])
         } else if (val[0] === 0) {
+            createHTML(val[1])
+            createCss()
+            displayNoneByRes(val[0])
+        } else if (val[0] === -1) {
             createHTML(val[1])
             createCss()
             displayNoneByRes(val[0])
@@ -51,7 +54,7 @@ function createHTML(url) {
                         )
                         </span>
                       </h2>
-                      <ul>
+                      <ul class="ulInfo">
                         <li>
                             <span>人人影视</span>
                             <span>
@@ -60,7 +63,13 @@ function createHTML(url) {
                             <span>暂无资源</span>
                             <span></span>
                         </li>
-                      </ul>`
+                      </ul>
+                      <ul class="ulError">
+                        <li>
+                            <span>请求失败</span>
+                        </li>
+                      </ul>
+                      `
 
     aside.insertBefore(wrap, subject_doulist)
 }
@@ -110,14 +119,23 @@ function createCss() {
 */
 function displayNoneByRes(res) {
     let span = document.querySelectorAll(".subject-wheretowatch ul span")
-    console.log(span)
+    let ulError = document.querySelector(".subject-wheretowatch .ulError")
+    let ulInfo = document.querySelector(".subject-wheretowatch .ulInfo")
+
+
     if (res === 1) {
         // 隐藏“暂无资源”
         span[2].style.cssText = 'display: none'
+        // 隐藏请求失败模块
+        ulError.style.cssText = 'display: none'
     } else if (res === 0) {
         // 隐藏“资源链接”
         span[1].style.cssText = 'display: none'
         span[2].style.cssText = 'color: #FF0000; font-weight: bold'
+        // 隐藏请求失败模块
+        ulError.style.cssText = 'display: none'
+    } else if (res === -1) {
+        ulInfo.style.cssText = 'display: none'
     }
 }
 
@@ -149,12 +167,11 @@ function getMovieId(movieName, resolve, reject) {
                 // 传递的数组
                 info = [1, "https://www.yysub.net/resource/list/" + movieId]
             }
-
             resolve(info)
         },
         onerror: function (response) {
-            console.log("请求失败");
-            let info = [0, ""]
+            console.log("请求失败", response);
+            let info = [-1, ""]
             reject(info)
         }
     });
